@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.tmp-pyyaml/
+.pytest_cache/
+.coverage
+
+design-review-output/
+design-review-test-output/
+design-review-forward-test-output/
+dist/
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
