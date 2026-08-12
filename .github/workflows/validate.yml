@@ -1,0 +1,57 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Python tests
+        env:
+          PYTHONUTF8: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Compile the score validator
+        env:
+          PYTHONUTF8: "1"
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/design-review-pycache
+        run: python -m py_compile design-review/scripts/validate_score.py
+
+      - name: Smoke-test Windows annotation
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\smoke_annotator.ps1
+
+      - name: Build and inspect release archive
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package_release.ps1 -Version 1.0.0
+          $extract = Join-Path $env:RUNNER_TEMP 'design-review-release'
+          Expand-Archive .\dist\design-review-v1.0.0.zip -DestinationPath $extract
+          if (-not (Test-Path (Join-Path $extract 'design-review\SKILL.md'))) { throw 'Invalid archive layout' }
+          if (Get-ChildItem $extract -Recurse -File | Where-Object { $_.Name -match '\.pyc$|^test_' }) { throw 'Release contains test/cache files' }
+
+      - name: Re-run repository tests against the built archive
+        if: runner.os == 'Windows'
+        env:
+          PYTHONUTF8: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python -m unittest discover -s tests -p "test_repository.py" -v
