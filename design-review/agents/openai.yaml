@@ -1,0 +1,4 @@
+interface:
+  display_name: "设计专家团评审"
+  short_description: "分级证据评审视觉稿，并生成问题标注图与优化结构示意"
+  default_prompt: "Use $design-review to run a read-only expert review of this design and return a prioritized Chinese report with an annotated issue image and an optimization diagram when possible."
